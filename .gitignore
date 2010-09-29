@@ -27,3 +27,8 @@ backups
 xxx
 /3rdparty
 /tmp/
+
+# ignore results from examples
+examples/*/results/
+examples/*/*/results/
+examples/*/*/*/results/
