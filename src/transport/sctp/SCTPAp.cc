@@ -50,6 +50,8 @@ SCTPAp::SCTPAp(bool enable,
     mGiveUpTimer = cMessage(str);
     mGiveUpTimer.setContextPointer(&mrAssoc);
     mGiveUpTimer.setControlInfo(pinfo->dup());
+
+    delete pinfo;
 }
 
 SCTPAp::~SCTPAp()
