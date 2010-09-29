@@ -364,9 +364,7 @@ class INET_API SCTPStateVariables : public cPolymorphic
         SCTPStateVariables();
         ~SCTPStateVariables();
     public:
-        inline void setPrimaryPath(SCTPPathVariables* path) {
-            primaryPath = path;
-        }
+        void setPrimaryPath(SCTPPathVariables* path);
         inline const IPvXAddress& getPrimaryPathIndex() const {
             if(primaryPath != NULL) {
                 return(primaryPath->remoteAddress);

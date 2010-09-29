@@ -1489,6 +1489,7 @@ void SCTPAssociation::process_TIMEOUT_HEARTBEAT(SCTPPathVariables* path)
             if (path == state->getPrimaryPath()) {
                 state->setPrimaryPath(getNextPath(path));
             }
+            path->mpActiveProbing->Deactivate();
             sctpEV3 << "pathErrorCount now "<< path->pathErrorCount
                       << "; PP now " << state->getPrimaryPathIndex() << endl;
         }
@@ -1557,6 +1558,7 @@ int32 SCTPAssociation::updateCounters(SCTPPathVariables* path)
         if (path == state->getPrimaryPath()) {
             state->setPrimaryPath(getNextPath(path));
         }
+        path->mpActiveProbing->Deactivate();
         sctpEV3<<"process_TIMEOUT_RESET("<<(path->remoteAddress)<<") : PATH ERROR COUNTER EXCEEDED, path status is INACTIVE\n";
         if (allPathsInactive())
         {
@@ -1618,6 +1620,7 @@ int32 SCTPAssociation::process_TIMEOUT_RTX(SCTPPathVariables* path)
                 notifyUlp = true;
             }
             path->activePath = false;
+            path->mpActiveProbing->Deactivate();
             if (path->remoteAddress == state->getPrimaryPathIndex()) {
                 SCTPPathVariables* nextPath = getNextPath(path);
                 if (nextPath != NULL) {
@@ -1669,6 +1672,7 @@ int32 SCTPAssociation::process_TIMEOUT_RTX(SCTPPathVariables* path)
         }
     }
 
+    path->mpActiveProbing->ActivateIfNeeded();
 
     SCTPPathVariables* nextPath = getNextPath(path);
     sctpEV3 << "TimeoutRTX: sendOnAllPaths()" << endl;

@@ -29,7 +29,6 @@
 
 #include <sstream>
 
-
 SCTPPathVariables::SCTPPathVariables(const IPvXAddress& addr, SCTPAssociation* assoc)
 {
     InterfaceTableAccess interfaceTableAccess;
@@ -114,6 +113,13 @@ SCTPPathVariables::SCTPPathVariables(const IPvXAddress& addr, SCTPAssociation* a
     HeartbeatIntervalTimer->setControlInfo(pinfo->dup());
     CwndTimer->setControlInfo(pinfo->dup());
 
+    bool ap_enable = (bool) assoc->getSctpMain()->par("apEnabled");
+    double ap_period = (double) assoc->getSctpMain()->par("apPeriod");
+    double ap_burst = (int) assoc->getSctpMain()->par("apBurst");
+    double ap_give_up = (double) assoc->getSctpMain()->par("apGiveUp");
+    mpActiveProbing = new SCTPAp(ap_enable, ap_period, ap_burst,
+                                 ap_give_up, *this);
+
 }
 
 SCTPPathVariables::~SCTPPathVariables()
@@ -129,6 +135,7 @@ SCTPPathVariables::~SCTPPathVariables()
 
     delete pathTSN;
     delete pathRcvdTSN;
+    delete mpActiveProbing;
 
 }
 
@@ -251,6 +258,14 @@ SCTPStateVariables::~SCTPStateVariables()
 {
 }
 
+void
+SCTPStateVariables::setPrimaryPath(SCTPPathVariables* path)
+{
+    // Deactivate Active Probing on all paths
+    if (path && path->activePath && !(path->mpActiveProbing->IsActivated()))
+        path->mpActiveProbing->DeactivateOnAllPaths();
+    primaryPath = path;
+}
 
 //
 // FSM framework, SCTP FSM
@@ -429,6 +444,10 @@ bool SCTPAssociation::processTimer(cMessage *msg)
             sctpMain->testing = true;
             sctpEV3<<"set testing to true\n";
         }
+    }
+    else if (path!=NULL && path->mpActiveProbing->IsApTimer(msg))
+    {
+        path->mpActiveProbing->ProcessTimeout(msg);
     }
     else
     {
@@ -723,6 +742,10 @@ void SCTPAssociation::stateEntered(int32 status)
         }
         case SCTP_S_CLOSED:
         {
+            // Deactivate AP on all paths
+            SCTPPathVariables* first_path = sctpPathMap.begin()->second;
+            if (first_path)
+                first_path->mpActiveProbing->DeactivateOnAllPaths();
             sendIndicationToApp(SCTP_I_CLOSED);
             break;
         }
@@ -743,6 +766,14 @@ void SCTPAssociation::stateEntered(int32 status)
             else {
                 sendOnAllPaths(state->getPrimaryPath());
             }
+            break;
+        }
+        case SCTP_S_SHUTDOWN_ACK_SENT:
+        {
+            // Deactivate AP on all paths
+            SCTPPathVariables* first_path = sctpPathMap.begin()->second;
+            if (first_path)
+                first_path->mpActiveProbing->DeactivateOnAllPaths();
             break;
         }
     }

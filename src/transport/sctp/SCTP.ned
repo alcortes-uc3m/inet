@@ -58,6 +58,11 @@ simple SCTP
         int swsLimit                            = default(3000);        // Limit for SWS
         bool udpEncapsEnabled                   = default(false);
 
+        // ====== Active Probing ==============================================
+        bool apEnabled                          = default(false);
+        double apPeriod @unit(s)                = default(1s);
+        int apBurst                             = default(5);
+        double apGiveUp @unit(s)                = default(10s);
 
 
 
