@@ -32,3 +32,6 @@ xxx
 examples/*/results/
 examples/*/*/results/
 examples/*/*/*/results/
+
+# ignore cscope database files
+cscope.*
