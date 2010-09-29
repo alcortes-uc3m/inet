@@ -38,7 +38,7 @@
 #include <math.h>
 #include <platdep/intxtypes.h>
 #include "common.h"
-
+#include "SCTPAp.h"
 
 class SCTPMessage;
 class SCTPCommand;
@@ -47,6 +47,7 @@ class SCTPReceiveStream;
 class SCTPSendStream;
 class SCTPAlgorithm;
 class SCTP;
+class SCTPAp;
 
 typedef std::vector<IPvXAddress> AddressVector;
 
@@ -256,6 +257,7 @@ class INET_API SCTPPathVariables : public cPolymorphic
         simtime_t           pathRto;
         simtime_t           srtt;
         simtime_t           rttvar;
+        SCTPAp*             mpActiveProbing;
 
         // ====== Path Statistics =============================================
         unsigned int        gapAcksInLastSACK;
@@ -481,6 +483,7 @@ class INET_API SCTPAssociation : public cObject
 {
     friend class SCTP;
     friend class SCTPPathVariables;
+    friend class SCTPAp;
 
     // map for storing the path parameters
     typedef std::map<IPvXAddress,SCTPPathVariables*> SCTPPathMap;
