@@ -1,0 +1,21 @@
+ifconfig:
+# interface ppp0 to inside
+name: ppp0
+        inet_addr: 10.1.1.1
+        Mask: 255.255.255.0
+        MTU: 596
+        POINTTOPOINT
+# interface ppp1 to outside
+name: ppp1
+        inet_addr: 10.1.2.1
+        Mask: 255.255.255.0
+        MTU: 596
+        POINTTOPOINT
+ifconfigend.
+
+route:
+#Destination    Gateway         Genmask          Flags   Metric  Iface
+10.1.1.254      0.0.0.0         255.255.255.255  H       1       ppp0
+10.1.2.2        0.0.0.0         255.255.255.255  H       1       ppp1
+10.1.3.0        10.1.2.2        255.255.255.0    G       2       ppp1
+routeend.
