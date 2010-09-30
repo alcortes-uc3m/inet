@@ -35,3 +35,6 @@ examples/*/*/*/results/
 
 # ignore cscope database files
 cscope.*
+
+# ignore .computed from charts
+.computed
