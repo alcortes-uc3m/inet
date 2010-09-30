@@ -62,9 +62,9 @@ protected:
     // how many HEARTBEATs already sent while AP is activated
     int mAlreadySent;
     // Timer for the periodic send of HEARBEATs
-    cMessage mPeriodTimer;
+    cMessage* mpPeriodTimer;
     // Timer to set the path as inactive
-    cMessage mGiveUpTimer;
+    cMessage* mpGiveUpTimer;
 };
 
 #endif // SCTPAP_H

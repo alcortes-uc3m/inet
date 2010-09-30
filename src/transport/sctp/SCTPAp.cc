@@ -41,24 +41,26 @@ SCTPAp::SCTPAp(bool enable,
     snprintf(str, sizeof(str), "AP_PERIOD_TIMER %d:%s",
              mrAssoc.assocId,
              addr.str().c_str());
-    mPeriodTimer = cMessage(str);
-    mPeriodTimer.setContextPointer(&mrAssoc);
-    mPeriodTimer.setControlInfo(pinfo->dup());
+    mpPeriodTimer = new cMessage(str);
+    mpPeriodTimer->setContextPointer(&mrAssoc);
+    mpPeriodTimer->setControlInfo(pinfo->dup());
 
     snprintf(str, sizeof(str), "AP_GIVEUP_TIMER %d:%s",
              mrAssoc.assocId,
              addr.str().c_str());
-    mGiveUpTimer = cMessage(str);
-    mGiveUpTimer.setContextPointer(&mrAssoc);
-    mGiveUpTimer.setControlInfo(pinfo->dup());
+    mpGiveUpTimer = new cMessage(str);
+    mpGiveUpTimer->setContextPointer(&mrAssoc);
+    mpGiveUpTimer->setControlInfo(pinfo->dup());
 
     delete pinfo;
 }
 
 SCTPAp::~SCTPAp()
 {
-    mrAssoc.stopTimer(&mPeriodTimer);
-    mrAssoc.stopTimer(&mGiveUpTimer);
+    mrAssoc.stopTimer(mpPeriodTimer);
+    delete mpPeriodTimer;
+    mrAssoc.stopTimer(mpGiveUpTimer);
+    delete mpGiveUpTimer;
 }
 
 
@@ -76,9 +78,9 @@ SCTPAp::ActivateIfNeeded()
     mAlreadySent++;
 
     // schedule the next PERIOD timer (for next HEARTBEAT)
-    mrAssoc.startTimer(&mPeriodTimer, mPeriodSecs);
+    mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
     // schedule the GIVEUP timer
-    mrAssoc.startTimer(&mGiveUpTimer, mGiveUpSecs);
+    mrAssoc.startTimer(mpGiveUpTimer, mGiveUpSecs);
 
     mIsActivated = true;
     EV << "---- SCTP-AP activated on "
@@ -95,8 +97,8 @@ SCTPAp::Deactivate()
     if (!mIsActivated)
         return;
 
-    mrAssoc.stopTimer(&mPeriodTimer);
-    mrAssoc.stopTimer(&mGiveUpTimer);
+    mrAssoc.stopTimer(mpPeriodTimer);
+    mrAssoc.stopTimer(mpGiveUpTimer);
     mAlreadySent = 0;
     mIsActivated = false;
     EV << "---- SCTP-AP deactivated on "
@@ -130,9 +132,9 @@ SCTPAp::IsActivated()
 bool
 SCTPAp::IsApTimer(const cMessage* const pMsg)
 {
-    if (pMsg == &mPeriodTimer)
+    if (pMsg == mpPeriodTimer)
         return true;
-    if (pMsg == &mGiveUpTimer)
+    if (pMsg == mpGiveUpTimer)
         return true;
     return false;
 }
@@ -140,10 +142,10 @@ SCTPAp::IsApTimer(const cMessage* const pMsg)
 void
 SCTPAp::ProcessTimeout(const cMessage* const pMsg)
 {
-    if (pMsg == &mPeriodTimer) {
+    if (pMsg == mpPeriodTimer) {
         EV << "---- SCTP-AP PERIOD timeout on mAlreadySent="
            << mAlreadySent << ", Burst=" << mBurst << endl;
-        mrAssoc.stopTimer(&mPeriodTimer);
+        mrAssoc.stopTimer(mpPeriodTimer);
 
         if (! mIsEnabled)
             return;
@@ -154,11 +156,11 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
            << mrPath.remoteAddress.str().c_str() << endl;
         mrAssoc.sendHeartbeat(&mrPath);
         mAlreadySent++;
-        mrAssoc.startTimer(&mPeriodTimer, mPeriodSecs);
+        mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
         return;
     }
 
-    if (pMsg == &mGiveUpTimer) {
+    if (pMsg == mpGiveUpTimer) {
         EV << "---- SCTP-AP GIVEUP timeout on "
            << mrPath.remoteAddress.str().c_str() << endl;
 
