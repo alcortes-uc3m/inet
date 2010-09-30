@@ -141,11 +141,13 @@ void
 SCTPAp::ProcessTimeout(const cMessage* const pMsg)
 {
     if (pMsg == &mPeriodTimer) {
+        EV << "---- SCTP-AP PERIOD timeout on mAlreadySent="
+           << mAlreadySent << ", Burst=" << mBurst << endl;
         mrAssoc.stopTimer(&mPeriodTimer);
 
         if (! mIsEnabled)
             return;
-        if (! mAlreadySent < mBurst)
+        if (mAlreadySent >= mBurst)
             return;
 
         EV << "---- SCTP-AP PERIOD timeout on "
