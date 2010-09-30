@@ -56,7 +56,7 @@ network ap
             // propagation delay of 5m of cooper = 25ns
             distance = 5m;
             disabled = false;
-            // transmission time at 10Mbps of 536B + 40B + 7B = 583B = 4664b : 0.4664ms
+            // transmission time at 10Mbps of 536B + 40B + 7B = 583B = 4664b : 46.64ms
             datarate = 10Mbps;
             ber = 0;
             per = 0;
