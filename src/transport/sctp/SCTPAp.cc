@@ -27,6 +27,7 @@ SCTPAp::SCTPAp(bool enable,
     : mIsEnabled(enable),
       mPeriodSecs(periodSecs),
       mBurst(burst),
+      mGiveUpSecs(giveUpSecs),
       mrPath(rPath),
       mrAssoc(*rPath.association),
       mIsActivated(false),
@@ -70,18 +71,19 @@ SCTPAp::ActivateIfNeeded()
     if (IsActivated())
         return false;
 
-    EV << "---- Active Probing activated" << endl;
-
     // send the first HEARTBEAT
     mrAssoc.sendHeartbeat(&mrPath);
     mAlreadySent++;
 
-    // schedule the next HEARTBEAT
+    // schedule the next PERIOD timer (for next HEARTBEAT)
     mrAssoc.startTimer(&mPeriodTimer, mPeriodSecs);
-    // schedule the give up timer
+    // schedule the GIVEUP timer
     mrAssoc.startTimer(&mGiveUpTimer, mGiveUpSecs);
 
     mIsActivated = true;
+    EV << "---- SCTP-AP activated on "
+       << mrPath.remoteAddress.str().c_str() << endl;
+
     return true;
 }
 
@@ -90,12 +92,15 @@ SCTPAp::Deactivate()
 {
     if (!mIsEnabled)
         return;
+    if (!mIsActivated)
+        return;
 
-    EV << "---- Probing deactivated" << std::endl;
     mrAssoc.stopTimer(&mPeriodTimer);
     mrAssoc.stopTimer(&mGiveUpTimer);
     mAlreadySent = 0;
     mIsActivated = false;
+    EV << "---- SCTP-AP deactivated on "
+       << mrPath.remoteAddress.str().c_str() << std::endl;
 }
 
 void
@@ -104,7 +109,7 @@ SCTPAp::DeactivateOnAllPaths()
     if (!mIsEnabled)
         return;
 
-    EV << "---- Active Probing deactivating in all paths" << std::endl;
+    EV << "---- SCTP-AP deactivating all paths" << std::endl;
     SCTPAssociation::SCTPPathMap path_map = mrAssoc.sctpPathMap;
     for (SCTPAssociation::SCTPPathMap::iterator iterator = path_map.begin();
          iterator != path_map.end() ;
@@ -143,7 +148,8 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
         if (! mAlreadySent < mBurst)
             return;
 
-        EV << "---- Active Probing period timeout" << endl;
+        EV << "---- SCTP-AP PERIOD timeout on "
+           << mrPath.remoteAddress.str().c_str() << endl;
         mrAssoc.sendHeartbeat(&mrPath);
         mAlreadySent++;
         mrAssoc.startTimer(&mPeriodTimer, mPeriodSecs);
@@ -151,10 +157,67 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
     }
 
     if (pMsg == &mGiveUpTimer) {
-        EV << "---- Active Probing: give up timeout TODO" << endl;
+        EV << "---- SCTP-AP GIVEUP timeout on "
+           << mrPath.remoteAddress.str().c_str() << endl;
+
+        mrPath.mpActiveProbing->Deactivate();
+
+        // This code is adapted SCTPAssociation::process_TIMEOUT_HEARTBEAT
+        // there is also similar code in SCTPAssociation::process_TIMEOUT_RTX
+        bool old_state;
+
+        /* set path state to INACTIVE */
+        old_state = mrPath.activePath;
+        mrPath.activePath = false;
+        SCTPPathVariables* p_next_path = mrAssoc.getNextPath(&mrPath);
+        if (&mrPath == mrAssoc.state->getPrimaryPath()) {
+            mrAssoc.state->setPrimaryPath(p_next_path);
+        }
+        sctpEV3 << "pathErrorCount now "<< mrPath.pathErrorCount
+                << "; PP now " << mrAssoc.state->getPrimaryPathIndex() << endl;
+
+        /* then: we can check, if all paths are INACTIVE ! */
+        if (mrAssoc.allPathsInactive())
+        {
+            sctpEV3<<"sctp_do_hb_to_timer() : ALL PATHS INACTIVE --> closing ASSOC\n";
+            mrAssoc.sendIndicationToApp(SCTP_I_CONN_LOST);
+            return;
+        } else if (mrPath.activePath == false && old_state == true)
+        {
+            /* notify the application, in case the PATH STATE has changed from ACTIVE to INACTIVE */
+            mrAssoc.pathStatusIndication(&mrPath, false);
+        }
+
+        // Do Retransmission if any
+        SCTPQueue* retrans_queue = mrAssoc.retransmissionQ;
+        if (!retrans_queue->payloadQueue.empty()) {
+            sctpEV3 << "Still " << retrans_queue->payloadQueue.size()
+                    << " chunks in retrans_queue" << endl;
+
+            for (SCTPQueue::PayloadQueue::iterator iterator = retrans_queue->payloadQueue.begin();
+                 iterator != retrans_queue->payloadQueue.end(); iterator++) {
+                SCTPDataVariables* chunk = iterator->second;
+
+                // Only insert chunks that were sent to the path that has timed out
+                if ( ((mrAssoc.chunkHasBeenAcked(chunk) == false && chunk->countsAsOutstanding) || chunk->hasBeenReneged) &&
+                     (chunk->getLastDestinationPath() == &mrPath) ) {
+                    sctpEV3 << simTime() << ": Timer-Based RTX for TSN "
+                            << chunk->tsn << " on path " << chunk->getLastDestination() << endl;
+                    chunk->getLastDestinationPath()->numberOfTimerBasedRetransmissions++;
+                    SCTP::AssocStatMap::iterator iter = mrAssoc.sctpMain->assocStatMap.find(mrAssoc.assocId);
+                    iter->second.numT3Rtx++;
+
+                    mrAssoc.moveChunkToOtherPath(chunk, mrAssoc.getNextDestination(chunk));
+                }
+            }
+        }
+
+        // send pending data
+        mrAssoc.sendOnAllPaths(p_next_path);
         return;
     }
 
-    EV << "---- Active Probing error: asked to process unknown timer" << endl;
+    EV << "---- SCTP-AP asked to process unknown timer on "
+       << mrPath.remoteAddress.str().c_str() << endl;
     return;
 }
