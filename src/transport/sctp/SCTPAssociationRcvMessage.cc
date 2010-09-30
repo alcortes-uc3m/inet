@@ -1381,6 +1381,9 @@ SCTPEventCode SCTPAssociation::processHeartbeatAckArrived(SCTPHeartbeatAckChunk*
     sctpEV3 << "Received HB ACK chunk...resetting error counters on path " << addr
               <<", rttEstimation=" << rttEstimation << endl;
     path->pathErrorCount = 0;
+
+    path->mpActiveProbing->Deactivate();
+
     return SCTP_E_IGNORE;
 }
 
