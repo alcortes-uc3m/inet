@@ -71,6 +71,7 @@ foreach line {
    {"SCTP"}
    {"NClients"               "sctp/nclients"        "./run"               "run"}
    {"Multi-homing"           "sctp/multihomed"      "./run"               "run"}
+   {"Active Probing"         "sctp/active_probing"  "./run"               "run"}
 
    {"Emulation"}
    {"Traceroute"             "emulation/traceroute" "./run"               "run"}
