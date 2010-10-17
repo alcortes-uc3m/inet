@@ -6,7 +6,7 @@
         <set-channel-attr src-module="ap.router_4a" src-gate="pppg$o[1]" attr="per" value="1"/>
         <set-channel-attr src-module="ap.router_4z" src-gate="pppg$o[0]" attr="per" value="1"/>
     </at>
-    <at t="16s">
+    <at t="18s">
         <set-channel-attr src-module="ap.router_2a" src-gate="pppg$o[1]" attr="per" value="0"/>
         <set-channel-attr src-module="ap.router_2z" src-gate="pppg$o[0]" attr="per" value="0"/>
         <set-channel-attr src-module="ap.router_4a" src-gate="pppg$o[1]" attr="per" value="0"/>
