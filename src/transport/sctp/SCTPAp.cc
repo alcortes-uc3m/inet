@@ -139,6 +139,12 @@ SCTPAp::IsApTimer(const cMessage* const pMsg)
     return false;
 }
 
+bool
+IsSendAllowedByCwnd()
+{
+    return true;
+}
+
 void
 SCTPAp::ProcessTimeout(const cMessage* const pMsg)
 {
@@ -153,8 +159,10 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
         if (mAlreadySent >= mBurst)
             return;
 
-        mrAssoc.sendHeartbeat(&mrPath);
-        mAlreadySent++;
+        if (IsSendAllowedByCwnd()) {
+            mrAssoc.sendHeartbeat(&mrPath);
+            mAlreadySent++;
+        }
         mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
         return;
     }
