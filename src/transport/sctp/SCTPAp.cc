@@ -143,8 +143,9 @@ void
 SCTPAp::ProcessTimeout(const cMessage* const pMsg)
 {
     if (pMsg == mpPeriodTimer) {
-        EV << "---- SCTP-AP PERIOD timeout on mAlreadySent="
-           << mAlreadySent << ", Burst=" << mBurst << endl;
+        EV << "---- SCTP-AP PERIOD timeout on " << mrPath.remoteAddress.str().c_str()
+           << ", mAlreadySent=" << mAlreadySent
+           << ", Burst=" << mBurst << endl;
         mrAssoc.stopTimer(mpPeriodTimer);
 
         if (! mIsEnabled)
@@ -152,8 +153,6 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
         if (mAlreadySent >= mBurst)
             return;
 
-        EV << "---- SCTP-AP PERIOD timeout on "
-           << mrPath.remoteAddress.str().c_str() << endl;
         mrAssoc.sendHeartbeat(&mrPath);
         mAlreadySent++;
         mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
