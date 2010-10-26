@@ -151,7 +151,7 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
     if (pMsg == mpPeriodTimer) {
         EV << "---- SCTP-AP PERIOD timeout on " << mrPath.remoteAddress.str().c_str()
            << ", mAlreadySent=" << mAlreadySent
-           << ", Burst=" << mBurst << endl;
+           << ", mBurst=" << mBurst << endl;
         mrAssoc.stopTimer(mpPeriodTimer);
 
         if (! mIsEnabled)
