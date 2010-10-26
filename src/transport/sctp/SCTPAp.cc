@@ -30,7 +30,7 @@ SCTPAp::SCTPAp(bool enable,
       mGiveUpSecs(giveUpSecs),
       mrPath(rPath),
       mrAssoc(*rPath.association),
-      mIsActivated(false),
+      mIsOn(false),
       mAlreadySent(0)
 {
     const IPvXAddress& addr = rPath.remoteAddress;
@@ -65,12 +65,12 @@ SCTPAp::~SCTPAp()
 
 
 bool
-SCTPAp::ActivateIfNeeded()
+SCTPAp::TurnOnIfNeeded()
 {
     // TODO check more activation conditions
     if (!mIsEnabled)
         return false;
-    if (IsActivated())
+    if (IsOn())
         return false;
 
     // send the first HEARTBEAT
@@ -82,51 +82,51 @@ SCTPAp::ActivateIfNeeded()
     // schedule the GIVEUP timer
     mrAssoc.startTimer(mpGiveUpTimer, mGiveUpSecs);
 
-    mIsActivated = true;
-    EV << "---- SCTP-AP activated on "
+    mIsOn = true;
+    EV << "---- SCTP-AP turned on on "
        << mrPath.remoteAddress.str().c_str() << endl;
 
     return true;
 }
 
 void
-SCTPAp::Deactivate()
+SCTPAp::TurnOff()
 {
     if (!mIsEnabled)
         return;
-    if (!mIsActivated)
+    if (!mIsOn)
         return;
 
     mrAssoc.stopTimer(mpPeriodTimer);
     mrAssoc.stopTimer(mpGiveUpTimer);
     mAlreadySent = 0;
-    mIsActivated = false;
-    EV << "---- SCTP-AP deactivated on "
+    mIsOn = false;
+    EV << "---- SCTP-AP turned off on "
        << mrPath.remoteAddress.str().c_str() << std::endl;
 }
 
 void
-SCTPAp::DeactivateOnAllPaths()
+SCTPAp::TurnOffOnAllPaths()
 {
     if (!mIsEnabled)
         return;
 
-    EV << "---- SCTP-AP deactivating all paths" << std::endl;
+    EV << "---- SCTP-AP is going to be turned off on all paths" << std::endl;
     SCTPAssociation::SCTPPathMap path_map = mrAssoc.sctpPathMap;
     for (SCTPAssociation::SCTPPathMap::iterator iterator = path_map.begin();
          iterator != path_map.end() ;
          ++iterator) {
         SCTPPathVariables* p_path = iterator->second;
-        p_path->mpActiveProbing->Deactivate();
+        p_path->mpActiveProbing->TurnOff();
     }
 }
 
 bool
-SCTPAp::IsActivated()
+SCTPAp::IsOn()
 {
     if (!mIsEnabled)
         return false;
-    return mIsActivated;
+    return mIsOn;
 }
 
 bool
@@ -164,7 +164,7 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
         EV << "---- SCTP-AP GIVEUP timeout on "
            << mrPath.remoteAddress.str().c_str() << endl;
 
-        mrPath.mpActiveProbing->Deactivate();
+        mrPath.mpActiveProbing->TurnOff();
 
         // This code is adapted SCTPAssociation::process_TIMEOUT_HEARTBEAT
         // there is also similar code in SCTPAssociation::process_TIMEOUT_RTX

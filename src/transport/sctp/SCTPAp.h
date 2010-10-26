@@ -34,10 +34,10 @@ public:
            SCTPPathVariables& rPath);
     ~SCTPAp();
 
-    bool IsActivated();
-    bool ActivateIfNeeded();
-    void Deactivate();
-    void DeactivateOnAllPaths();
+    bool IsOn();
+    bool TurnOnIfNeeded();
+    void TurnOff();
+    void TurnOffOnAllPaths();
 
     bool IsApTimer(const cMessage* const pMsg);
     void ProcessTimeout(const cMessage* const pMsg);
@@ -45,9 +45,9 @@ public:
 protected:
     // ====== Simulation Parameters ===========================================
     bool mIsEnabled;
-    // Period between HEARTBEATs while AP is activated
+    // Period between HEARTBEATs while AP is on
     double mPeriodSecs;
-    // Number of HEARTBEATs to send while AP is activated
+    // Number of HEARTBEATs to send while AP is on
     int mBurst;
     // Time to wait for SACKs or HEARTBEAT-ACKs
     double mGiveUpSecs;
@@ -57,9 +57,9 @@ protected:
     SCTPPathVariables& mrPath;
     // we belong to this association
     SCTPAssociation& mrAssoc;
-    // is AP activated for this path?
-    bool mIsActivated;
-    // how many HEARTBEATs already sent while AP is activated
+    // is AP running for this path?
+    bool mIsOn;
+    // how many HEARTBEATs already sent while AP is on
     int mAlreadySent;
     // Timer for the periodic send of HEARBEATs
     cMessage* mpPeriodTimer;

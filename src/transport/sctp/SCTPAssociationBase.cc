@@ -280,8 +280,8 @@ void
 SCTPStateVariables::setPrimaryPath(SCTPPathVariables* path)
 {
     // Deactivate Active Probing on all paths
-    if (path && path->activePath && !(path->mpActiveProbing->IsActivated()))
-        path->mpActiveProbing->DeactivateOnAllPaths();
+    if (path && path->activePath && !(path->mpActiveProbing->IsOn()))
+        path->mpActiveProbing->TurnOffOnAllPaths();
     primaryPath = path;
 }
 
@@ -763,7 +763,7 @@ void SCTPAssociation::stateEntered(int32 status)
             // Deactivate AP on all paths
             SCTPPathVariables* first_path = sctpPathMap.begin()->second;
             if (first_path)
-                first_path->mpActiveProbing->DeactivateOnAllPaths();
+                first_path->mpActiveProbing->TurnOffOnAllPaths();
             sendIndicationToApp(SCTP_I_CLOSED);
             break;
         }
@@ -791,7 +791,7 @@ void SCTPAssociation::stateEntered(int32 status)
             // Deactivate AP on all paths
             SCTPPathVariables* first_path = sctpPathMap.begin()->second;
             if (first_path)
-                first_path->mpActiveProbing->DeactivateOnAllPaths();
+                first_path->mpActiveProbing->TurnOffOnAllPaths();
             break;
         }
     }
