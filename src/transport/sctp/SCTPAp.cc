@@ -21,17 +21,16 @@
 
 SCTPAp::SCTPAp(bool enable,
                double periodSecs,
-               int burst,
                double giveUpSecs,
                SCTPPathVariables& rPath)
     : mIsEnabled(enable),
       mPeriodSecs(periodSecs),
-      mBurst(burst),
       mGiveUpSecs(giveUpSecs),
       mrPath(rPath),
       mrAssoc(*rPath.association),
       mIsOn(false),
-      mAlreadySent(0)
+      mHbBurst(mGiveUpSecs / mPeriodSecs),
+      mHbSent(0)
 {
     const IPvXAddress& addr = rPath.remoteAddress;
     SCTPPathInfo* pinfo = new SCTPPathInfo("pinfo");
@@ -63,28 +62,57 @@ SCTPAp::~SCTPAp()
     delete mpGiveUpTimer;
 }
 
+uint32
+SCTPAp::MaxOsbToUse()
+{
+    return HEARTBEAT_SIZE_BYTES * mHbBurst;
+}
+
+uint32
+SCTPAp::Osb()
+{
+    return HEARTBEAT_SIZE_BYTES * mHbSent;
+}
 
 bool
 SCTPAp::TurnOnIfNeeded()
 {
-    // TODO check more activation conditions
     if (!mIsEnabled)
         return false;
+
     if (IsOn())
         return false;
 
+    // If there is not enoguh SCTP cwnd left to allocate the AP HEARTBEATS, don't go enter AP status
+    const int32 allowance = mrPath.cwnd - mrPath.outstandingBytes;
+    if (allowance < 0 || (uint32)allowance < MaxOsbToUse()) {
+        EV << "---- SCTP-AP is not going to turned on on "
+           << mrPath.remoteAddress.str().c_str()
+           << ", allowance = " << allowance
+           << ", MaxOsbToUse = " << MaxOsbToUse()
+           << "; Not enought allowance for AP HEARTBEATs"
+           << endl;
+        return false;
+    }
+
+    // reserve the required outstanding bytes to avoid application to consume them
+//    mrPath.outstandingBytes += MaxOsbToUse();
+
     // send the first HEARTBEAT
     mrAssoc.sendHeartbeat(&mrPath);
-    mAlreadySent++;
+    mHbSent++;
 
     // schedule the next PERIOD timer (for next HEARTBEAT)
-    mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
+    if (mHbSent < mHbBurst)
+        mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
     // schedule the GIVEUP timer
     mrAssoc.startTimer(mpGiveUpTimer, mGiveUpSecs);
 
     mIsOn = true;
     EV << "---- SCTP-AP turned on on "
-       << mrPath.remoteAddress.str().c_str() << endl;
+       << mrPath.remoteAddress.str().c_str()
+       << ", reserved " << MaxOsbToUse() << " from the outstading bytes"
+       << endl;
 
     return true;
 }
@@ -99,7 +127,6 @@ SCTPAp::TurnOff()
 
     mrAssoc.stopTimer(mpPeriodTimer);
     mrAssoc.stopTimer(mpGiveUpTimer);
-    mAlreadySent = 0;
     mIsOn = false;
     EV << "---- SCTP-AP turned off on "
        << mrPath.remoteAddress.str().c_str() << std::endl;
@@ -139,31 +166,28 @@ SCTPAp::IsApTimer(const cMessage* const pMsg)
     return false;
 }
 
-bool
-IsSendAllowedByCwnd()
-{
-    return true;
-}
-
 void
 SCTPAp::ProcessTimeout(const cMessage* const pMsg)
 {
-    if (pMsg == mpPeriodTimer) {
-        EV << "---- SCTP-AP PERIOD timeout on " << mrPath.remoteAddress.str().c_str()
-           << ", mAlreadySent=" << mAlreadySent
-           << ", mBurst=" << mBurst << endl;
+    if (pMsg == mpPeriodTimer)
+    {
+        EV << "---- SCTP-AP PERIOD timeout on "
+           << mrPath.remoteAddress.str().c_str()
+           << ", mHbBurst = " << mHbBurst
+           << ", mHbSent = " << mHbSent
+           << endl;
         mrAssoc.stopTimer(mpPeriodTimer);
 
         if (! mIsEnabled)
             return;
-        if (mAlreadySent >= mBurst)
-            return;
 
-        if (IsSendAllowedByCwnd()) {
+        if (mHbSent < mHbBurst) {
             mrAssoc.sendHeartbeat(&mrPath);
-            mAlreadySent++;
+            mHbSent++;
+            if (mHbSent < mHbBurst)
+                mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
         }
-        mrAssoc.startTimer(mpPeriodTimer, mPeriodSecs);
+
         return;
     }
 
@@ -188,13 +212,11 @@ SCTPAp::ProcessTimeout(const cMessage* const pMsg)
                 << "; PP now " << mrAssoc.state->getPrimaryPathIndex() << endl;
 
         /* then: we can check, if all paths are INACTIVE ! */
-        if (mrAssoc.allPathsInactive())
-        {
+        if (mrAssoc.allPathsInactive()) {
             sctpEV3<<"sctp_do_hb_to_timer() : ALL PATHS INACTIVE --> closing ASSOC\n";
             mrAssoc.sendIndicationToApp(SCTP_I_CONN_LOST);
             return;
-        } else if (mrPath.activePath == false && old_state == true)
-        {
+        } else if (mrPath.activePath == false && old_state == true) {
             /* notify the application, in case the PATH STATE has changed from ACTIVE to INACTIVE */
             mrAssoc.pathStatusIndication(&mrPath, false);
         }

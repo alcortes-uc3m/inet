@@ -29,7 +29,6 @@ class SCTPAp
 public:
     SCTPAp(bool enabled,
            double periodSecs,
-           int burst,
            double giveUpSecs,
            SCTPPathVariables& rPath);
     ~SCTPAp();
@@ -42,13 +41,13 @@ public:
     bool IsApTimer(const cMessage* const pMsg);
     void ProcessTimeout(const cMessage* const pMsg);
 
+    static const uint32 HEARTBEAT_SIZE_BYTES = 10;
+
 protected:
     // ====== Simulation Parameters ===========================================
     bool mIsEnabled;
     // Period between HEARTBEATs while AP is on
     double mPeriodSecs;
-    // Number of HEARTBEATs to send while AP is on
-    int mBurst;
     // Time to wait for SACKs or HEARTBEAT-ACKs
     double mGiveUpSecs;
 
@@ -59,12 +58,20 @@ protected:
     SCTPAssociation& mrAssoc;
     // is AP running for this path?
     bool mIsOn;
-    // how many HEARTBEATs already sent while AP is on
-    int mAlreadySent;
     // Timer for the periodic send of HEARBEATs
     cMessage* mpPeriodTimer;
     // Timer to set the path as inactive
     cMessage* mpGiveUpTimer;
+    // How many AP HEARTBEATs will be sent during a GiveUp period?
+    uint32 mHbBurst;
+    // How many AP HEARTBEATS have been sent?
+    uint32 mHbSent;
+
+    // ====== Helper methods ==================================================
+    // How many bytes will consume the required AP HEARTBEATs?
+    uint32 MaxOsbToUse();
+    // current outstanding bytes spent in AP HEARTBEATs
+    uint32 Osb();
 };
 
 #endif // SCTPAP_H

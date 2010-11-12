@@ -1388,7 +1388,39 @@ SCTPEventCode SCTPAssociation::processHeartbeatAckArrived(SCTPHeartbeatAckChunk*
               <<", rttEstimation=" << rttEstimation << endl;
     path->pathErrorCount = 0;
 
-    path->mpActiveProbing->TurnOff();
+    if (path->mpActiveProbing->IsOn()) {
+
+        path->mpActiveProbing->TurnOff();
+
+        // This code is adapted SCTPAssociation::process_TIMEOUT_HEARTBEAT
+        // there is also similar code in SCTPAssociation::process_TIMEOUT_RTX
+        // Do Retransmission if any
+        SCTPQueue* retrans_queue = retransmissionQ;
+        if (!retrans_queue->payloadQueue.empty()) {
+            sctpEV3 << "Still " << retrans_queue->payloadQueue.size()
+                    << " chunks in retrans_queue" << endl;
+
+            for (SCTPQueue::PayloadQueue::iterator iterator = retrans_queue->payloadQueue.begin();
+                 iterator != retrans_queue->payloadQueue.end(); iterator++) {
+                SCTPDataVariables* chunk = iterator->second;
+
+                // Only insert chunks that were sent to the path that has timed out
+                if ( ((chunkHasBeenAcked(chunk) == false && chunk->countsAsOutstanding) || chunk->hasBeenReneged) &&
+                     (chunk->getLastDestinationPath() == path) ) {
+                    sctpEV3 << simTime() << ": Timer-Based RTX for TSN "
+                            << chunk->tsn << " on path " << chunk->getLastDestination() << endl;
+                    chunk->getLastDestinationPath()->numberOfTimerBasedRetransmissions++;
+                    SCTP::AssocStatMap::iterator iter = sctpMain->assocStatMap.find(assocId);
+                    iter->second.numT3Rtx++;
+
+                    moveChunkToOtherPath(chunk, getNextDestination(chunk));
+                }
+            }
+        }
+
+        // send pending data
+        sendOnAllPaths(path);
+    }
 
     return SCTP_E_IGNORE;
 }
