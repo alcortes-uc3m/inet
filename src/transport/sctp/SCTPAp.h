@@ -46,8 +46,8 @@ public:
 protected:
     // ====== Simulation Parameters ===========================================
     bool mIsEnabled;
-    // Period between HEARTBEATs while AP is on
-    double mPeriodSecs;
+    // Number of HEARTBEATs to send while in AP
+    double mHbBurst;
     // Time to wait for SACKs or HEARTBEAT-ACKs
     double mGiveUpSecs;
 
@@ -62,8 +62,8 @@ protected:
     cMessage* mpPeriodTimer;
     // Timer to set the path as inactive
     cMessage* mpGiveUpTimer;
-    // How many AP HEARTBEATs will be sent during a GiveUp period?
-    uint32 mHbBurst;
+    // Period between HEARTBEATs while AP is on
+    double mPeriodSecs;
     // How many AP HEARTBEATS have been sent?
     uint32 mHbSent;
 

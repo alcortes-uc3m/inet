@@ -60,7 +60,7 @@ simple SCTP
 
         // ====== Active Probing ==============================================
         bool apEnabled                          = default(false);
-        double apPeriod @unit(s)                = default(1s);
+        double apBurst                          = default(5);
         double apGiveUp @unit(s)                = default(10s);
 
 

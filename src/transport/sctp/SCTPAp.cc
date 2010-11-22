@@ -20,16 +20,16 @@
 #include "SCTPCommand_m.h"
 
 SCTPAp::SCTPAp(bool enable,
-               double periodSecs,
+               double hbBurst,
                double giveUpSecs,
                SCTPPathVariables& rPath)
     : mIsEnabled(enable),
-      mPeriodSecs(periodSecs),
+      mHbBurst(hbBurst),
       mGiveUpSecs(giveUpSecs),
       mrPath(rPath),
       mrAssoc(*rPath.association),
+      mPeriodSecs(mGiveUpSecs / mHbBurst),
       mIsOn(false),
-      mHbBurst(mGiveUpSecs / mPeriodSecs),
       mHbSent(0)
 {
     const IPvXAddress& addr = rPath.remoteAddress;

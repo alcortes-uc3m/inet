@@ -127,9 +127,9 @@ SCTPPathVariables::SCTPPathVariables(const IPvXAddress& addr, SCTPAssociation* a
     CwndTimer->setControlInfo(pinfo->dup());
 
     bool ap_enable = (bool) assoc->getSctpMain()->par("apEnabled");
-    double ap_period = (double) assoc->getSctpMain()->par("apPeriod");
+    double ap_burst = (double) assoc->getSctpMain()->par("apBurst");
     double ap_give_up = (double) assoc->getSctpMain()->par("apGiveUp");
-    mpActiveProbing = new SCTPAp(ap_enable, ap_period, ap_give_up, *this);
+    mpActiveProbing = new SCTPAp(ap_enable, ap_burst, ap_give_up, *this);
 
 }
 
