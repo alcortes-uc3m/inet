@@ -28,8 +28,8 @@ SCTPAp::SCTPAp(bool enable,
       mGiveUpSecs(giveUpSecs),
       mrPath(rPath),
       mrAssoc(*rPath.association),
-      mPeriodSecs(mGiveUpSecs / mHbBurst),
       mIsOn(false),
+      mPeriodSecs(mGiveUpSecs / mHbBurst),
       mHbSent(0)
 {
     const IPvXAddress& addr = rPath.remoteAddress;
