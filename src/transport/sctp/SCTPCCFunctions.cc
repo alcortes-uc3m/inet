@@ -30,7 +30,7 @@ inline double rint(double x) {return floor(x+.5);}
 void SCTPAssociation::recordCwndUpdate(SCTPPathVariables* path)
 {
     path->statisticsPathSSthresh->record(path->ssthresh);
-    path->statisticsPathCwnd->record(path->cwnd);
+    path->statisticsPathCwnd->record(path->getCwnd());
 }
 
 
@@ -38,12 +38,12 @@ void SCTPAssociation::recordCwndUpdate(SCTPPathVariables* path)
 
 void SCTPAssociation::initCCParameters(SCTPPathVariables* path)
 {
-        path->cwnd = (int32)min(4 * path->pmtu, max(2 * path->pmtu, 4380));
+    path->setCwnd((int32)min(4 * path->pmtu, max(2 * path->pmtu, 4380)));
     path->ssthresh = state->peerRwnd;
     recordCwndUpdate(path);
 
     sctpEV3 << simTime() << ":\tCC [initCCParameters]\t" << path->remoteAddress
-              << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+            << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
 }
 
 
@@ -58,13 +58,13 @@ void SCTPAssociation::cwndUpdateAfterSack()
                 double decreaseFactor = 0.5;
 
                       sctpEV3 << simTime() << ":\tCC [cwndUpdateAfterSack]\t" << path->remoteAddress
-                                 << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd;
+                              << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd();
 
-                      path->ssthresh = max((int32)path->cwnd - (int32)rint(decreaseFactor * (double)path->cwnd),
+                      path->ssthresh = max((int32)path->getCwnd() - (int32)rint(decreaseFactor * (double)path->getCwnd()),
                                                   4 * (int32)path->pmtu);
-                      path->cwnd = path->ssthresh;
+                      path->setCwnd(path->ssthresh);
 
-                      sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+                      sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
                  recordCwndUpdate(path);
                  path->partialBytesAcked = 0;
 
@@ -135,7 +135,7 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
               << " path="                     << path->remoteAddress
               << " ackedBytes="           << ackedBytes
               << " ctsnaAdvanced="        << ((ctsnaAdvanced == true) ? "yes" : "no")
-              << " cwnd="                     << path->cwnd
+              << " cwnd="                     << path->getCwnd()
               << " ssthresh="                 << path->ssthresh
               << " ackedBytes="           << ackedBytes
               << " pathOsbBeforeUpdate=" << path->outstandingBytesBeforeUpdate
@@ -147,19 +147,19 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
         //                      Fast Recovery mode!
 
         // ====== Slow Start ==================================================
-        if (path->cwnd <= path->ssthresh)  {
+        if (path->getCwnd() <= path->ssthresh)  {
             // ------ Clear PartialBytesAcked counter --------------------------
             path->partialBytesAcked = 0;
 
             // ------ Increase Congestion Window -------------------------------
             if ((ctsnaAdvanced == true) &&
-                 (path->outstandingBytesBeforeUpdate >= path->cwnd)) {
+                (path->outstandingBytesBeforeUpdate >= path->getCwnd())) {
                     sctpEV3 << simTime() << ":\tCC [cwndUpdateBytesAcked-SlowStart]\t" << path->remoteAddress
-                              << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << " acked=" << ackedBytes;
+                              << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << " acked=" << ackedBytes;
 
-                    path->cwnd += (int32)min(path->pmtu, ackedBytes);
+                    path->setCwnd(path->getCwnd() + (int32)min(path->pmtu, ackedBytes));
 
-                    sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+                    sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
                 recordCwndUpdate(path);
             }
 
@@ -168,13 +168,13 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
                 sctpEV3 << simTime() << ":\tCC "
                         << "Not increasing cwnd of path " << path->remoteAddress << " in slow start:\t"
                         << "ctsnaAdvanced="       << ((ctsnaAdvanced == true) ? "yes" : "no") << "\t"
-                        << "cwnd="                    << path->cwnd                              << "\t"
+                        << "cwnd="                    << path->getCwnd()                         << "\t"
                         << "ssthresh="                << path->ssthresh                          << "\t"
                         << "ackedBytes="              << ackedBytes                              << "\t"
                         << "pathOsbBeforeUpdate=" << path->outstandingBytesBeforeUpdate << "\t"
                         << "pathOsb="                 << path->outstandingBytes              << "\t"
                         << "(pathOsbBeforeUpdate >= path->cwnd)="
-                        << (path->outstandingBytesBeforeUpdate >= path->cwnd) << endl;
+                        << (path->outstandingBytesBeforeUpdate >= path->getCwnd()) << endl;
             }
         }
 
@@ -187,19 +187,19 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
             double increaseFactor = 1.0;
 
             // ------ Increase Congestion Window -------------------------------
-            if ( (path->partialBytesAcked >= path->cwnd) &&
+            if ( (path->partialBytesAcked >= path->getCwnd()) &&
                   (ctsnaAdvanced == true) &&
-                  (path->outstandingBytesBeforeUpdate >= path->cwnd) ) {
+                 (path->outstandingBytesBeforeUpdate >= path->getCwnd()) ) {
                     sctpEV3 << simTime() << ":\tCC [cwndUpdateBytesAcked-CgAvoidance]\t" << path->remoteAddress
-                              << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << " acked=" << ackedBytes;
+                            << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << " acked=" << ackedBytes;
 
-                    path->cwnd += (int32)rint(increaseFactor * path->pmtu);
+                    path->setCwnd(path->getCwnd() + (int32)rint(increaseFactor * path->pmtu));
 
-                    sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+                    sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
                 recordCwndUpdate(path);
                 path->partialBytesAcked =
-                    ((path->cwnd < path->partialBytesAcked) ?
-                        (path->partialBytesAcked - path->cwnd) : 0);
+                    ((path->getCwnd() < path->partialBytesAcked) ?
+                     (path->partialBytesAcked - path->getCwnd()) : 0);
             }
 
             // ------ No need to increase Congestion Window -------------------
@@ -207,16 +207,16 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
                 sctpEV3 << simTime() << ":\tCC "
                         << "Not increasing cwnd of path " << path->remoteAddress << " in congestion avoidance: "
                         << "ctsnaAdvanced="       << ((ctsnaAdvanced == true) ? "yes" : "no") << "\t"
-                        << "cwnd="                    << path->cwnd                              << "\t"
+                        << "cwnd="                    << path->getCwnd()                         << "\t"
                         << "ssthresh="                << path->ssthresh                          << "\t"
                         << "ackedBytes="              << ackedBytes                              << "\t"
                         << "pathOsbBeforeUpdate=" << path->outstandingBytesBeforeUpdate << "\t"
                         << "pathOsb="                 << path->outstandingBytes              << "\t"
                         << "(pathOsbBeforeUpdate >= path->cwnd)="
-                            << (path->outstandingBytesBeforeUpdate >= path->cwnd)            << "\t"
+                        << (path->outstandingBytesBeforeUpdate >= path->getCwnd())           << "\t"
                         << "partialBytesAcked="   << path->partialBytesAcked                 << "\t"
                         << "(path->partialBytesAcked >= path->cwnd)="
-                            << (path->partialBytesAcked >= path->cwnd) << endl;
+                        << (path->partialBytesAcked >= path->getCwnd()) << endl;
             }
         }
 
@@ -236,12 +236,12 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
 void SCTPAssociation::cwndUpdateAfterRtxTimeout(SCTPPathVariables* path)
 {
         sctpEV3 << simTime() << ":\tCC [cwndUpdateAfterRtxTimeout]\t" << path->remoteAddress
-                    << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd;
+                << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd();
 
-        path->ssthresh = (int32)max(path->cwnd / 2, 4 * path->pmtu);
-        path->cwnd = path->pmtu;
+        path->ssthresh = (int32)max(path->getCwnd() / 2, 4 * path->pmtu);
+        path->setCwnd(path->pmtu);
 
-        sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+        sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
     path->partialBytesAcked         = 0;
     recordCwndUpdate(path);
 
@@ -255,16 +255,16 @@ void SCTPAssociation::cwndUpdateAfterRtxTimeout(SCTPPathVariables* path)
 
 void SCTPAssociation::cwndUpdateMaxBurst(SCTPPathVariables* path)
 {
-        if(path->cwnd > ((path->outstandingBytes + state->maxBurst * path->pmtu))) {
+    if(path->getCwnd() > ((path->outstandingBytes + state->maxBurst * path->pmtu))) {
             sctpEV3 << simTime()      << ":\tCC [cwndUpdateMaxBurst]\t" << path->remoteAddress
-                    << "\tsst="       << path->ssthresh << " cwnd=" << path->cwnd
+                    << "\tsst="       << path->ssthresh << " cwnd=" << path->getCwnd()
                     << "\tosb="       << path->outstandingBytes
                     << "\tmaxBurst=" << state->maxBurst * path->pmtu << endl;
 
-            path->cwnd = path->outstandingBytes + (state->maxBurst * path->pmtu);
+            path->setCwnd(path->outstandingBytes + (state->maxBurst * path->pmtu));
             recordCwndUpdate(path);
 
-            sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+            sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
         }
 }
 
@@ -275,8 +275,8 @@ void SCTPAssociation::cwndUpdateAfterCwndTimeout(SCTPPathVariables* path)
     // within an RTO, the cwnd of the transport address SHOULD be adjusted to 2*MTU.
 
         sctpEV3 << simTime() << ":\tCC [cwndUpdateAfterCwndTimeout]\t" << path->remoteAddress
-                  << "\tsst=" << path->ssthresh << " cwnd=" << path->cwnd;
-        path->cwnd = (int32)min(4 * path->pmtu, max(2 * path->pmtu, 4380));
-        sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->cwnd << endl;
+                << "\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd();
+        path->setCwnd((int32)min(4 * path->pmtu, max(2 * path->pmtu, 4380)));
+        sctpEV3 << "\t=>\tsst=" << path->ssthresh << " cwnd=" << path->getCwnd() << endl;
     recordCwndUpdate(path);
 }

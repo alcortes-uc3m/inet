@@ -220,7 +220,7 @@ void SCTPAssociation::bytesAllowedToSend(SCTPPathVariables* path,
     bytes.bytesToSend = 0;
 
     sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "):"
-              << " osb=" << path->outstandingBytes << " cwnd=" << path->cwnd << endl;
+            << " osb=" << path->outstandingBytes << " cwnd=" << path->getCwnd() << endl;
 
     // ====== First transmission =============================================
     if (!state->firstDataSent) {
@@ -243,7 +243,7 @@ void SCTPAssociation::bytesAllowedToSend(SCTPPathVariables* path,
         CounterMap::const_iterator it = qCounter.roomTransQ.find(path->remoteAddress);
         sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "): bytes in transQ=" << it->second << endl;
         if (it->second > 0) {
-            const int32 allowance = path->cwnd - path->outstandingBytes;
+            const int32 allowance = path->getCwnd() - path->outstandingBytes;
             sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "): cwnd-osb=" << allowance << endl;
             if (state->peerRwnd < path->pmtu) {
                 bytes.bytesToSend = state->peerRwnd;
@@ -271,15 +271,15 @@ void SCTPAssociation::bytesAllowedToSend(SCTPPathVariables* path,
 
         // ====== New transmissions ===========================================
         if (!bytes.chunk && !bytes.packet) {
-            if ((path->outstandingBytes < path->cwnd) &&
+            if ((path->outstandingBytes < path->getCwnd()) &&
                  (!state->peerWindowFull)) {
                 sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "):"
                           << " bookedSumSendStreams=" << qCounter.bookedSumSendStreams
                           << " bytes.bytesToSend="      << bytes.bytesToSend << endl;
-                const int32 allowance = path->cwnd - path->outstandingBytes - bytes.bytesToSend;
+                const int32 allowance = path->getCwnd() - path->outstandingBytes - bytes.bytesToSend;
                 if (allowance > 0) {
                     if (qCounter.bookedSumSendStreams > (uint32)allowance) {
-                        bytes.bytesToSend = path->cwnd - path->outstandingBytes;
+                        bytes.bytesToSend = path->getCwnd() - path->outstandingBytes;
                         sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "): bytesToSend are limited by cwnd: "
                                   << bytes.bytesToSend << endl;
                     }
@@ -295,7 +295,7 @@ void SCTPAssociation::bytesAllowedToSend(SCTPPathVariables* path,
 
     sctpEV3 << "bytesAllowedToSend(" << path->remoteAddress << "):"
               << " osb="  << path->outstandingBytes
-              << " cwnd=" << path->cwnd
+            << " cwnd=" << path->getCwnd()
               << " bytes.packet=" << (bytes.packet ? "YES!" : "no")
               << " bytes.chunk="     << (bytes.chunk    ? "YES!" : "no")
               << " bytes.bytesToSend=" << bytes.bytesToSend << endl;

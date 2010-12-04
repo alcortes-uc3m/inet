@@ -155,6 +155,26 @@ SCTPPathVariables::~SCTPPathVariables()
 
 }
 
+uint32
+SCTPPathVariables::getCwnd() const
+{
+    // if SCTP-AP is activated on any of the paths of the association
+    // return a lower value of cwnd, to implement the cwnd reservation
+    // of SCTP-AP. If cwnd is already at its minumum (pmtu), just return
+    // that
+    if (cwnd <= pmtu)
+        return cwnd;
+    SCTPAssociation::SCTPPathMap path_map = association->sctpPathMap;
+    for (SCTPAssociation::SCTPPathMap::iterator iterator = path_map.begin();
+         iterator != path_map.end() ;
+         ++iterator) {
+        SCTPPathVariables* p_path = iterator->second;
+        if (p_path->mpActiveProbing->IsOn())
+            return cwnd - mpActiveProbing->ReservedCwnd();
+    }
+
+    return cwnd;
+}
 
 const IPvXAddress SCTPDataVariables::zeroAddress = IPvXAddress("0.0.0.0");
 

@@ -44,7 +44,7 @@ void SCTPAssociation::printSctpPathMap() const
           iterator != sctpPathMap.end(); ++iterator) {
         const SCTPPathVariables* path = iterator->second;
         sctpEV3 << " - " << path->remoteAddress << ":  osb=" << path->outstandingBytes
-                  << " cwnd=" << path->cwnd << endl;
+                << " cwnd=" << path->getCwnd() << endl;
     }
 }
 
@@ -1173,7 +1173,7 @@ void SCTPAssociation::removePath(const IPvXAddress& addr)
     if (pathIterator != sctpPathMap.end())
     {
         SCTPPathVariables* path = pathIterator->second;
-        path->cwnd      = 0;
+        path->setCwnd(0);
         path->ssthresh = 0;
         recordCwndUpdate(path);
 

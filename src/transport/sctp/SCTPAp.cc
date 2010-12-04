@@ -63,7 +63,7 @@ SCTPAp::~SCTPAp()
 }
 
 uint32
-SCTPAp::MaxOsbToUse()
+SCTPAp::ReservedCwnd()
 {
     return HEARTBEAT_SIZE_BYTES * mHbBurst;
 }
@@ -84,12 +84,12 @@ SCTPAp::TurnOnIfNeeded()
         return false;
 
     // If there is not enoguh SCTP cwnd left to allocate the AP HEARTBEATS, don't go enter AP status
-    const int32 allowance = mrPath.cwnd - mrPath.outstandingBytes;
-    if (allowance < 0 || (uint32)allowance < MaxOsbToUse()) {
+    const int32 allowance = mrPath.getCwnd() - mrPath.outstandingBytes;
+    if (allowance < 0 || (uint32)allowance < ReservedCwnd()) {
         EV << "---- SCTP-AP is not going to turned on on "
            << mrPath.remoteAddress.str().c_str()
            << ", allowance = " << allowance
-           << ", MaxOsbToUse = " << MaxOsbToUse()
+           << ", ReservedCwnd = " << ReservedCwnd()
            << "; Not enought allowance for AP HEARTBEATs"
            << endl;
         return false;
@@ -111,7 +111,7 @@ SCTPAp::TurnOnIfNeeded()
     mIsOn = true;
     EV << "---- SCTP-AP turned on on "
        << mrPath.remoteAddress.str().c_str()
-       << ", reserved " << MaxOsbToUse() << " from the outstading bytes"
+       << ", reserved " << ReservedCwnd() << " from the outstading bytes"
        << endl;
 
     return true;

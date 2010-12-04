@@ -38,6 +38,8 @@ public:
     void TurnOff();
     void TurnOffOnAllPaths();
 
+    uint32 ReservedCwnd();
+
     bool IsApTimer(const cMessage* const pMsg);
     void ProcessTimeout(const cMessage* const pMsg);
 
@@ -68,8 +70,6 @@ protected:
     uint32 mHbSent;
 
     // ====== Helper methods ==================================================
-    // How many bytes will consume the required AP HEARTBEATs?
-    uint32 MaxOsbToUse();
     // current outstanding bytes spent in AP HEARTBEATs
     uint32 Osb();
 };

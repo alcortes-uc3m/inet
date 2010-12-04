@@ -225,7 +225,6 @@ class INET_API SCTPPathVariables : public cPolymorphic
         uint32              pathErrorThreshold;
         uint32              pmtu;
         // ====== Congestion Control ==========================================
-        uint32              cwnd;
         uint32              ssthresh;
         uint32              partialBytesAcked;
         uint32              queuedBytes;                            // T.D. 19.02.2010
@@ -281,6 +280,13 @@ class INET_API SCTPPathVariables : public cPolymorphic
         cOutVector*         statisticsPathRTT;
         cOutVector*         statisticsPathSSthresh;
         cOutVector*         statisticsPathCwnd;
+
+    private:
+        uint32              cwnd;
+
+    public:
+        uint32              getCwnd() const;
+        inline void         setCwnd(uint32 cw) { cwnd = cw; };
 };
 
 
